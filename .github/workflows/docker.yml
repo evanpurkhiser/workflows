@@ -2,13 +2,15 @@ name: docker
 on:
   workflow_call:
     inputs:
-    secrets:
-      token:
+      publish:
         required: true
+        type: boolean
 
 jobs:
-  publish:
+  build:
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -17,7 +19,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.token }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata for image
         id: metadata
@@ -41,4 +43,4 @@ jobs:
           cache-to: type=gha,mode=max
           cache-from: type=gha
           annotations: ${{ steps.meta.outputs.annotations }}
-          push: ${{ github.ref == 'refs/heads/main' }}
+          push: ${{ inputs.publish }}
