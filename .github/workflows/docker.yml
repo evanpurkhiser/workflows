@@ -1,3 +1,41 @@
+# Docker Build & Publish Workflow
+#
+# A reusable workflow for building Docker images with GitHub Container Registry (GHCR) support.
+#
+# Features:
+#   - Sets up Docker Buildx for advanced build capabilities
+#   - Authenticates with GitHub Container Registry (ghcr.io)
+#   - Extracts and applies OCI metadata labels
+#   - Supports build caching via GitHub Actions cache
+#   - Conditionally publishes images based on input parameter
+#   - Tags images with full commit SHA and `latest`
+#
+# Usage:
+#   name: Build Docker Image
+#
+#   on:
+#     push:
+#       branches: [main]
+#     pull_request:
+#
+#   jobs:
+#     docker:
+#       uses: evanpurkhiser/workflows/.github/workflows/docker.yml@main
+#       with:
+#         publish: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+#
+# Inputs:
+#   publish (boolean, required): Whether to push the built image to GHCR
+#
+# Requirements:
+#   - A Dockerfile in the root directory
+#   - GitHub Actions permissions to write packages (automatically granted for workflows in the same repository)
+#
+# Image Details:
+#   - Published to: ghcr.io/<owner>/<repository>
+#   - Tagged with: full commit SHA and `latest`
+#   - Labeled with OCI standard metadata
+
 name: docker
 on:
   workflow_call:
