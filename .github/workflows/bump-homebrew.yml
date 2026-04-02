@@ -52,4 +52,5 @@ jobs:
           gh api repos/evanpurkhiser/homebrew-personal/dispatches \
             --method POST \
             --field event_type=bump-formula \
-            --field client_payload='{"formula":"${{ inputs.formula }}","version":"'"${VERSION}"'"}'
+            --field client_payload[formula]="${{ inputs.formula }}" \
+            --field client_payload[version]="${VERSION}"
