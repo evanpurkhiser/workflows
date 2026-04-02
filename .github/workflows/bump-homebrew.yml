@@ -39,6 +39,7 @@ on:
 
 jobs:
   bump:
+    name: Bump
     runs-on: ubuntu-latest
 
     steps:
