@@ -54,3 +54,5 @@ jobs:
             --field event_type=bump-formula \
             --field client_payload[formula]="${{ inputs.formula }}" \
             --field client_payload[version]="${VERSION}"
+
+          echo "Homebrew bump workflow: https://github.com/evanpurkhiser/homebrew-personal/actions/workflows/bump.yml" >> "$GITHUB_STEP_SUMMARY"
