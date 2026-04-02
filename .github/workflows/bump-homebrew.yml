@@ -1,0 +1,54 @@
+# Bump Homebrew Formula Workflow
+#
+# A reusable workflow for triggering a Homebrew formula bump in a tap repository
+# via repository_dispatch after a new release is published.
+#
+# Usage:
+#   bump_homebrew:
+#     uses: evanpurkhiser/workflows/.github/workflows/bump-homebrew.yml@main
+#     with:
+#       formula: my-tool
+#       version: ${{ needs.release_meta.outputs.tag_name }}
+#     secrets:
+#       token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+#
+# Inputs:
+#   formula (string, required): The Homebrew formula name to bump (e.g. "things3-cloud")
+#   version (string, required): The new version string, with or without a leading "v"
+#
+# Secrets:
+#   token (required): A PAT with repo scope on the tap repository
+#
+# Requirements:
+#   - The target tap repo must have a bump.yml workflow triggered by repository_dispatch
+#     with event type "bump-formula" and client_payload fields "formula" and "version"
+
+name: bump-homebrew
+on:
+  workflow_call:
+    inputs:
+      formula:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Dispatch bump to homebrew-personal
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          gh api repos/evanpurkhiser/homebrew-personal/dispatches \
+            --method POST \
+            --field event_type=bump-formula \
+            --field client_payload='{"formula":"${{ inputs.formula }}","version":"'"${VERSION}"'"}'
