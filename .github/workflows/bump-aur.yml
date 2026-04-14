@@ -1,0 +1,60 @@
+# Bump AUR PKGBUILD Workflow
+#
+# A reusable workflow for triggering a PKGBUILDs bump/build workflow via
+# workflow_dispatch after a new release is published.
+#
+# Usage:
+#   bump_aur:
+#     uses: evanpurkhiser/workflows/.github/workflows/bump-aur.yml@main
+#     with:
+#       package: things3-cloud
+#       version: ${{ needs.release_meta.outputs.tag_name }}
+#     secrets:
+#       token: ${{ secrets.AUR_BUMP_DISPATCH_PAT }}
+#
+# Inputs:
+#   package (string, required): PKGBUILDs package directory name
+#   version (string, required): New version string, with or without leading "v"
+#   repository (string, optional): Target PKGBUILDs repo (owner/name)
+#
+# Secrets:
+#   token (required): PAT with actions:write and contents:read on target repository
+
+name: bump-aur
+on:
+  workflow_call:
+    inputs:
+      package:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      repository:
+        required: false
+        type: string
+        default: evanpurkhiser/PKGBUILDs
+    secrets:
+      token:
+        required: true
+
+jobs:
+  bump:
+    name: Bump
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Dispatch PKGBUILDs main workflow
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+
+          gh workflow run main.yml \
+            --repo "${{ inputs.repository }}" \
+            --ref main \
+            -f package="${{ inputs.package }}" \
+            -f version="${VERSION}"
+
+          echo "PKGBUILDs workflow: https://github.com/${{ inputs.repository }}/actions/workflows/main.yml" >> "$GITHUB_STEP_SUMMARY"
