@@ -82,5 +82,5 @@ jobs:
           tags: ghcr.io/${{ github.repository }}:latest
           cache-to: type=gha,mode=max
           cache-from: type=gha
-          annotations: ${{ steps.meta.outputs.annotations }}
+          annotations: ${{ steps.metadata.outputs.annotations }}
           push: ${{ inputs.publish }}
