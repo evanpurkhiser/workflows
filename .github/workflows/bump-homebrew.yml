@@ -46,13 +46,15 @@ jobs:
       - name: Dispatch main workflow in homebrew-personal
         env:
           GH_TOKEN: ${{ secrets.token }}
+          INPUTS_VERSION: ${{ inputs.version }}
+          INPUTS_FORMULA: ${{ inputs.formula }}
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${INPUTS_VERSION}"
           VERSION="${VERSION#v}"
           gh workflow run main.yml \
             --repo evanpurkhiser/homebrew-personal \
             --ref main \
-            -f formula="${{ inputs.formula }}" \
+            -f formula="${INPUTS_FORMULA}" \
             -f version="${VERSION}"
 
           echo "Homebrew main workflow: https://github.com/evanpurkhiser/homebrew-personal/actions/workflows/main.yml" >> "$GITHUB_STEP_SUMMARY"

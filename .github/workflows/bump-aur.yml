@@ -47,14 +47,17 @@ jobs:
       - name: Dispatch PKGBUILDs main workflow
         env:
           GH_TOKEN: ${{ secrets.token }}
+          INPUTS_VERSION: ${{ inputs.version }}
+          INPUTS_REPOSITORY: ${{ inputs.repository }}
+          INPUTS_PACKAGE: ${{ inputs.package }}
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="${INPUTS_VERSION}"
           VERSION="${VERSION#v}"
 
           gh workflow run main.yml \
-            --repo "${{ inputs.repository }}" \
+            --repo "${INPUTS_REPOSITORY}" \
             --ref main \
-            -f package="${{ inputs.package }}" \
+            -f package="${INPUTS_PACKAGE}" \
             -f version="${VERSION}"
 
-          echo "PKGBUILDs workflow: https://github.com/${{ inputs.repository }}/actions/workflows/main.yml" >> "$GITHUB_STEP_SUMMARY"
+          echo "PKGBUILDs workflow: https://github.com/${INPUTS_REPOSITORY}/actions/workflows/main.yml" >> "$GITHUB_STEP_SUMMARY"
