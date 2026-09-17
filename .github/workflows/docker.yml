@@ -8,7 +8,7 @@
 #   - Extracts and applies OCI metadata labels
 #   - Supports build caching via GitHub Actions cache
 #   - Conditionally publishes images based on input parameter
-#   - Tags images with full commit SHA and `latest`
+#   - Tags images with `latest` and returns the image digest
 #
 # Usage:
 #   name: Build Docker Image
@@ -33,12 +33,16 @@
 #
 # Image Details:
 #   - Published to: ghcr.io/<owner>/<repository>
-#   - Tagged with: full commit SHA and `latest`
+#   - Tagged with: `latest`
 #   - Labeled with OCI standard metadata
 
 name: docker
 on:
   workflow_call:
+    outputs:
+      digest:
+        description: Built image digest
+        value: ${{ jobs.build.outputs.digest }}
     inputs:
       publish:
         required: true
@@ -47,6 +51,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -78,6 +84,7 @@ jobs:
             org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }}
 
       - name: Build
+        id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
