@@ -1,0 +1,32 @@
+name: deploy-image-personal
+
+on:
+  workflow_call:
+    inputs:
+      digest:
+        description: Published image digest that triggered deployment
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out reusable workflow scripts
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: evanpurkhiser/workflows
+          ref: main
+          persist-credentials: false
+
+      - name: Notify personal image deployment service
+        env:
+          IMAGE_DIGEST: ${{ inputs.digest }}
+        run: python3 scripts/deploy-image-personal.py
