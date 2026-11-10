@@ -1,6 +1,18 @@
 # Reusable GitHub Actions Workflows
 
-A collection of reusable GitHub Actions workflows for common CI/CD tasks.
+A collection of reusable GitHub Actions workflows and actions for common CI/CD tasks.
+
+## Actions
+
+- [`push-verified-commit`](actions/push-verified-commit) - Create a GitHub-verified commit from staged files, then optionally tag it
+
+```yaml
+- run: git add package.json package-lock.json
+- uses: evanpurkhiser/workflows/actions/push-verified-commit@main
+  with:
+    commit-message: release v${{ inputs.version }}
+    tag: v${{ inputs.version }}
+```
 
 ## Workflows
 
