@@ -4,12 +4,12 @@ A collection of reusable GitHub Actions workflows and actions for common CI/CD t
 
 ## Actions
 
-- [`push-verified-commit`](actions/push-verified-commit) - Create a GitHub-verified commit from staged files, then optionally tag it
+- [`commit-and-push`](actions/commit-and-push) - Stage changes, create a GitHub-verified commit, and optionally tag it
 
 ```yaml
-- run: git add package.json package-lock.json
-- uses: evanpurkhiser/workflows/actions/push-verified-commit@main
+- uses: evanpurkhiser/workflows/actions/commit-and-push@main
   with:
+    stage-script: git add package.json package-lock.json
     commit-message: release v${{ inputs.version }}
     tag: v${{ inputs.version }}
 ```

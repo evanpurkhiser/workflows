@@ -1,7 +1,10 @@
-name: Push verified commit
-description: Create a GitHub-verified commit and optionally tag it
+name: Commit and push
+description: Stage changes, create a GitHub-verified commit, and optionally tag it
 
 inputs:
+  stage-script:
+    description: Shell script that stages the changes to commit
+    required: true
   branch:
     description: Target branch
     default: main
@@ -30,7 +33,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Create verified commit
+    - name: Commit and push
       id: commit
       shell: bash
       env:
@@ -39,6 +42,7 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         REPOSITORY: ${{ inputs.repository }}
         SERVER_URL: ${{ inputs.server-url }}
+        STAGE_SCRIPT: ${{ inputs.stage-script }}
         TAG: ${{ inputs.tag }}
         TAG_MESSAGE: ${{ inputs.tag-message }}
       run: "$GITHUB_ACTION_PATH/script.sh"

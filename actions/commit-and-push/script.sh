@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+bash -euo pipefail -c "$STAGE_SCRIPT"
+
 local_head=$(git rev-parse HEAD)
 remote_url="${SERVER_URL}/${REPOSITORY}.git"
 
