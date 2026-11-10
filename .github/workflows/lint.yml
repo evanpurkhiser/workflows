@@ -15,3 +15,82 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@v4.2.0
       - run: prek run --all-files
+
+  action-integration:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6.0.3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Create disposable target branch
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="automation/action-integration-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          tag="action-integration-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/heads/${branch}" \
+            -f sha="$(git rev-parse HEAD)" >/dev/null
+
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Stage representative Git changes
+        run: |
+          printf '\0binary probe\xff\n' > signature-probe.bin
+          printf '#!/bin/sh\necho probe\n' > signature-probe.sh
+          chmod +x signature-probe.sh
+          git add signature-probe.bin signature-probe.sh
+          git rm README.md
+
+      - name: Create verified commit
+        id: commit
+        uses: ./actions/push-verified-commit
+        with:
+          branch: ${{ steps.target.outputs.branch }}
+          commit-message: Test complete Git tree
+          tag: ${{ steps.target.outputs.tag }}
+
+      - name: Verify commit and tag
+        env:
+          COMMIT_OID: ${{ steps.commit.outputs.commit-oid }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.target.outputs.tag }}
+        run: |
+          commit=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${COMMIT_OID}")
+          test "$(jq -r .commit.verification.verified <<<"$commit")" = true
+          test "$(jq -r .commit.verification.reason <<<"$commit")" = valid
+          test "$(git ls-tree "$COMMIT_OID" signature-probe.sh | awk '{print $1}')" = 100755
+          printf '\0binary probe\xff\n' | cmp - <(git show "${COMMIT_OID}:signature-probe.bin")
+          if git cat-file -e "${COMMIT_OID}:README.md" 2>/dev/null; then
+            exit 1
+          fi
+
+          tag_oid=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" --jq .object.sha)
+          tag=$(gh api "repos/${GITHUB_REPOSITORY}/git/tags/${tag_oid}")
+          test "$(jq -r .object.sha <<<"$tag")" = "$COMMIT_OID"
+
+          jq '{
+            oid: .sha,
+            author: .author.login,
+            committer: .committer.login,
+            verification: .commit.verification
+          }' <<<"$commit"
+          jq '{tag: .tag, verification: .verification}' <<<"$tag"
+
+      - name: Remove disposable refs
+        if: always() && steps.target.outputs.branch != ''
+        env:
+          BRANCH: ${{ steps.target.outputs.branch }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.target.outputs.tag }}
+        run: |
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" >/dev/null 2>&1 || true
+          gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/tags/${TAG}" >/dev/null 2>&1 || true
