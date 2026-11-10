@@ -1,0 +1,49 @@
+name: Push verified commit
+description: Create a GitHub-verified commit and optionally tag it
+
+inputs:
+  branch:
+    description: Target branch
+    default: main
+  repository:
+    description: Target repository in owner/name form
+    default: ${{ github.repository }}
+  server-url:
+    description: GitHub server URL
+    default: ${{ github.server_url }}
+  commit-message:
+    description: Commit message
+    default: Automatic commit
+  tag:
+    description: Optional annotated tag to create and push
+  tag-message:
+    description: Annotated tag message; defaults to "Release <tag>"
+  token:
+    description: GitHub token with contents write permission
+    default: ${{ github.token }}
+
+outputs:
+  commit-oid:
+    description: Verified commit OID, or the current OID when there are no changes
+    value: ${{ steps.result.outputs.commit-oid }}
+
+runs:
+  using: composite
+  steps:
+    - name: Create verified commit
+      id: commit
+      shell: bash
+      env:
+        BRANCH: ${{ inputs.branch }}
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+        GH_TOKEN: ${{ inputs.token }}
+        REPOSITORY: ${{ inputs.repository }}
+        SERVER_URL: ${{ inputs.server-url }}
+        TAG: ${{ inputs.tag }}
+        TAG_MESSAGE: ${{ inputs.tag-message }}
+      run: "$GITHUB_ACTION_PATH/script.sh"
+
+    - name: Export commit OID
+      id: result
+      shell: bash
+      run: echo "commit-oid=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
