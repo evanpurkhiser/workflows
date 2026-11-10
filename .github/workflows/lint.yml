@@ -15,3 +15,72 @@ jobs:
           persist-credentials: false
       - uses: jdx/mise-action@v4.2.0
       - run: prek run --all-files
+
+  bot-signature-probe:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6.0.3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Create a bot-signed commit with the REST API
+        env:
+          BASE_OID: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          upload_branch="automation/signature-probe-upload-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          signed_branch="automation/signature-probe-result-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+
+          cleanup() {
+            gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${upload_branch}" >/dev/null 2>&1 || true
+            gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${signed_branch}" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          printf '\0binary probe\xff\n' > signature-probe.bin
+          printf '#!/bin/sh\necho probe\n' > signature-probe.sh
+          chmod +x signature-probe.sh
+
+          git add signature-probe.bin signature-probe.sh
+          git -c user.name=probe -c user.email=probe@example.com \
+            -c commit.gpgSign=false commit -m 'Test bot-signed REST commit'
+
+          test "$(git rev-parse HEAD^)" = "$BASE_OID"
+          tree_oid=$(git rev-parse 'HEAD^{tree}')
+
+          gh auth setup-git
+          git push origin "HEAD:refs/heads/${upload_branch}"
+
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/heads/${signed_branch}" \
+            -f sha="$BASE_OID" >/dev/null
+
+          response=$(jq -n \
+            --arg message 'Test bot-signed REST commit' \
+            --arg tree "$tree_oid" \
+            --arg parent "$BASE_OID" \
+            '{message: $message, tree: $tree, parents: [$parent]}' |
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/commits" --input -)
+          commit_oid=$(jq -er .sha <<<"$response")
+
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/heads/${signed_branch}" \
+            -f sha="$commit_oid" \
+            -F force=false >/dev/null
+
+          commit=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${commit_oid}")
+          test "$(jq -r .commit.tree.sha <<<"$commit")" = "$tree_oid"
+          test "$(jq -r .commit.verification.verified <<<"$commit")" = true
+          test "$(jq -r .commit.verification.reason <<<"$commit")" = valid
+
+          jq '{
+            oid: .sha,
+            author: .author.login,
+            committer: .committer.login,
+            verification: .commit.verification
+          }' <<<"$commit"
